@@ -1,0 +1,9 @@
+## **Main correlations**
+
+Main columns are studied now in order to check correlation between them into this cohort:
+
+```{r corr_matrix, echo = FALSE}
+gridExtra::grid.arrange(andiacare::corrChart(cohort),
+    top = grid::textGrob("Cohort correlations",
+        gp = gpar(fontsize = 20, font = 3)))
+```

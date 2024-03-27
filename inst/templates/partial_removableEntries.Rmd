@@ -1,0 +1,6 @@
+# **Removed patients (`r nrow(removableEntries)`)**
+
+The following patients have been removed because of QA reasons:
+```{r removedPatients, echo = FALSE}
+DT::datatable(removableEntries)
+```

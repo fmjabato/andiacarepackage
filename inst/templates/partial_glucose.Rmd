@@ -1,0 +1,76 @@
+## **Glucose stats**
+Patients glucose statistics:
+
+
+```{r glucose_mean_sd, echo = FALSE}
+graphlist_glucose <- list()
+
+if (flags$GlucoseMean && flags$SD) {
+    cohort$ATTD19_Glucose <- andiacare::attd19GlucoseTargetDM1(
+        cohort$GlucoseMean,
+        cohort$SD
+    )
+    cohort$ATTD19_Glucose <- ifelse(cohort$ATTD19_Glucose,
+        "In DM1 target (Mean < 154 mg/dl, SD < 29%)",
+        "Out of DM1 target"
+    )
+    tableGlucose <- andiacare:::tableFromCharVector(cohort$ATTD19_Glucose)
+    auxGlucose <- data.frame(Value = cohort$GlucoseMean,
+                            Type = rep("Cohort",
+                                    length(cohort$GlucoseMean)))
+
+    graph_glucose <- ggplot2::ggplot(auxGlucose, ggplot2::aes(x = Type,
+                                                             y = Value)) +
+            ggdist::stat_halfeye(adjust = .5, width = .6, justification = -.2,
+                .width = 0, point_colour = NA, na.rm = TRUE) +
+            ggplot2::geom_boxplot(width = .12, outlier.color = NA,
+                                    na.rm = TRUE) +
+            ggdist::stat_dots(side = "left", justification = 1.1,
+                binwidth = .25, na.rm = TRUE) +
+            ggplot2::coord_cartesian(xlim = c(1, NA)) +
+            ggplot2::ylab("Mean Glucose") +
+            ggplot2::xlab("") +
+            ggplot2::geom_hline(yintercept = 154, linetype = "dotted") +
+            ggplot2::theme(legend.position = "none")
+
+    graphlist_glucose <- append(graphlist_glucose, list(graph_glucose,
+                                            gridExtra::tableGrob(tableGlucose)))
+}
+```
+```{r glucose_cv, echo = FALSE}
+if(flags$CV) {
+    cohort$ATTD19_CV <- andiacare::attd19CVTargetDM1(cohort$CV)
+    cohort$ATTD19_CV <- ifelse(cohort$ATTD19_CV,
+        "In DM1 target (VC < 36%)",
+        "Out of DM1 target"
+    )
+    tableCV <- andiacare:::tableFromCharVector(cohort$ATTD19_CV)
+    auxCV <- data.frame(Value = cohort$CV,
+                        Type = rep("Cohort",length(cohort$CV)))
+    graph_cv <- ggplot2::ggplot(auxCV,ggplot2::aes(x = Type, y = Value)) +
+        ggplot2::geom_violin(na.rm = TRUE) +
+        ggplot2::ylab("Variation Coefficient") +
+        ggplot2::xlab("") +
+        ggplot2::geom_hline(yintercept = 36, linetype = "dotted") +
+        ggplot2::theme(legend.position = "none")
+
+    graph_cv <- ggplot2::ggplot(auxCV, ggplot2::aes(x = Type, y = Value)) +
+            ggdist::stat_halfeye(adjust = .5, width = .6, justification = -.2,
+                .width = 0, point_colour = NA, na.rm = TRUE) +
+            ggplot2::geom_boxplot(width = .12, outlier.color = NA,
+                                    na.rm = TRUE) +
+            ggdist::stat_dots(side = "left", justification = 1.1,
+                binwidth = .25, na.rm = TRUE) +
+            ggplot2::coord_cartesian(xlim = c(1, NA)) +
+            ggplot2::ylab("Variation Coefficient") +
+            ggplot2::xlab("") +
+            ggplot2::ylim(c(0,100)) +
+            ggplot2::geom_hline(yintercept = 36, linetype = "dotted") +
+            ggplot2::theme(legend.position = "none")
+
+    graphlist_glucose <- append(graphlist_glucose, list(graph_cv,
+                                    gridExtra::tableGrob(tableCV)))
+}
+
+gridExtra::grid.arrange(grobs = graphlist_glucose, ncol = 2)
+```

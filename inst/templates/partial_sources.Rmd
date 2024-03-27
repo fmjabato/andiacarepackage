@@ -1,0 +1,78 @@
+## **Source stats**
+
+```{r sources_setup, echo = FALSE, include=FALSE}
+# Extract unique hospitals info
+hospitals <- table(cohort$Source)
+hospitalsInfo <- data.frame(Source = names(hospitals),
+                            Amount = as.vector(hospitals))
+
+cohort$SourceSize <- rep(0, nrow(cohort))
+invisible(lapply(seq_along(hospitalsInfo$Source), function(i){
+    cohort$SourceSize[which(cohort$Source == hospitalsInfo$Source[i])] <<- 
+        hospitalsInfo$Amount[i]
+}))
+
+if(nrow(removableEntries) > 0){
+    # TODO include removed patients to have real hospital sizes
+}
+hospitalsInfo <- hospitalsInfo[order(-hospitalsInfo$Amount),]
+hospitalsInfo$Label <- paste0(hospitalsInfo$Source," (",hospitalsInfo$Amount,")") 
+hospitalsInfo$Label <- factor(hospitalsInfo$Label, levels = hospitalsInfo$Label)
+cohort$Source <- factor(cohort$Source, levels = hospitalsInfo$Source)
+hospitalsInfo$SWEET <- unlist(sapply(hospitalsInfo$Source, function(hp){
+    return(cohort$SWEET[head(which(cohort$Source == hp),1)])
+}))
+
+# Plot setups
+sweet_colors <- andiacare::sizeRangesColorsSWEET()
+hospitalsInfo$Color <- sweet_colors[match(hospitalsInfo$SWEET,names(sweet_colors))]
+
+# PiePlot necessary tables
+auxSWEET <- table(hospitalsInfo$SWEET)
+auxSWEET <- data.frame(label = names(auxSWEET),
+                        value = as.vector(auxSWEET))
+auxSWEET$color <- sweet_colors[auxSWEET$label]
+auxSWEET$perclabels <- paste(round(auxSWEET$value/sum(auxSWEET$value) * 100,
+                                2),
+                            "%")
+hospitalsSWEETCuts <- c()
+currSWEET <- as.character(hospitalsInfo$SWEET[1])
+for(i in seq_along(hospitalsInfo$SWEET)){
+    if(as.character(hospitalsInfo$SWEET[i]) != currSWEET){
+        aux <- names(hospitalsSWEETCuts)
+        hospitalsSWEETCuts <- c(hospitalsSWEETCuts,hospitalsInfo$Source[i])
+        currSWEET <- as.character(hospitalsInfo$SWEET[i])
+        if(is.null(aux)){
+            names(hospitalsSWEETCuts) <- c(currSWEET)
+        }else{
+            names(hospitalsSWEETCuts) <- c(aux, currSWEET)
+        }
+    }
+}
+```
+
+Following data has been calculated using the raw data (including QA filtered data). That usage of raw data only occurs at this section.
+
+Patients distribution by source is:
+```{r sources_plotdist, echo = FALSE}
+ggplot2::ggplot(data = hospitalsInfo, ggplot2::aes(x = Label,
+                                                   y = Amount, fill = SWEET)) +
+            ggplot2::geom_bar(stat = "identity") +
+            ggplot2::coord_flip() +
+            ggplot2::xlab("") +
+            ggplot2::ylab("") +
+            ggplot2::scale_fill_manual(values = sweet_colors)
+```
+
+SWEET proposes a hospitals size ranges which are: Small (less than 50), Medium (between 50 and 150) and Large (more than 150). This cohort SWEET distribution is:
+```{r sources_plotSWEET, echo = FALSE}
+ggplot2::ggplot(auxSWEET, ggplot2::aes(x = "", y = value, fill = label)) +
+    ggplot2::geom_bar(stat = "identity", width = 1) +
+    ggplot2::coord_polar("y", start = 0) +
+    ggplot2::xlab("") +
+    ggplot2::ylab("") +
+    ggplot2::scale_fill_manual(values = sweet_colors) +
+    ggplot2::geom_text(ggplot2::aes(label = perclabels),
+            position = ggplot2::position_stack(vjust = 0.5)) +
+    ggplot2::theme_void()
+```

@@ -1,0 +1,140 @@
+## **Andiacare**
+
+```{r and_setup, echo = FALSE}
+classes <- andiacare::allowedDiabetesClassifiers()$Andiacare$Classes(meta = TRUE)
+andClassesColors <- classes$Color
+names(andClassesColors) <- classes$Class
+cohort$Andiacare <- factor(cohort$Andiacare, levels = classes$Class)
+```
+
+Andiacare algorithm is our own algorithm and applies a triage over patients classifing them using colors. It algorithm is based on Time in Range (TIR) and Time Bellowe Range (TBR) info.
+
+If necessary info is not available, patient can be classified as _Not Allowed_; and patients with strange artifacts will be flagged as _Unclassified_. It could be caused by NAs presence.
+
+Our algorithm uses info about time in range (TIR), bellow range (TBR) and above range (TAR) using the following thresholds:
+
+* **Green:** (TIR > 70%) and (TBR < 4%) and (TAR < 25%) 
+* **Yellow:** (40% < TIR <= 70% ) or (4% <= TBR < 11%) or (25% <= TAR < 50%) 
+* **Orange:** (25% < TIR <= 40% ) or (11% <= TBR < 20%) or (50% <= TAR < 75%) 
+* **Red:** (TIR <= 25%) or (TBR >= 20%) or (TAR >= 75%) 
+
+**Important::** Green class has been designed to match with some of ATTD19 consensus targets (not all). Rest of thresholds are a linear distribution of this targets along possible dimension. Authros know that and want to adjust those thresholds to real ones making a study of this variables with real future problems along DM1 patients.
+
+### **Cohort results**
+
+Applying the algorithm to `r nrow(cohort)` patients, we obtain the following distribution:
+
+```{r and_plotCohortResults, echo = FALSE, warning=FALSE}    
+# Donutplot
+aux <- as.data.frame(table(cohort$Andiacare))
+N <- nrow(cohort)
+colnames(aux) <- c("label","value")
+aux$color <- as.vector(sapply(seq(nrow(aux)),function(i){
+  return(andClassesColors[which(names(andClassesColors) == aux$label[i])])
+}))
+aux$perclabels <- paste(round(aux$value/sum(aux$value) * 100, 2), "%")
+aux$Class <- paste0(aux$label, " (", aux$value, ")")
+
+classes$Label <- sapply(seq(nrow(classes)),function(i){
+  count <- aux$value[which(aux$label == classes$Class[i])]
+  if(length(count) == 0) count = 0
+  return(paste0(classes$Class[i]," (",
+                count,")"))
+})
+
+
+toinclude <- c("TIR", "TBR", "TAR", "Andiacare")
+if(flags$Birthdate) toinclude <- c(toinclude, "AgeRange")
+if(flags$Source) toinclude <- c(toinclude, "Source")
+
+auxpats <- cohort[,toinclude]
+auxpats$ClassLabel <- sapply(auxpats$Andiacare,function(cl){
+  return(classes$Label[which(classes$Class == cl)[1]])
+})
+
+names(andClassesColors) <- classes$Label
+auxpats$ClassLabel <- factor(auxpats$ClassLabel, levels = classes$Label)
+
+
+
+# -----------------
+# Pieplot
+# -----------------
+aux <- aux[aux$value > 0,]
+andpie <- ggplot2::ggplot(aux, ggplot2::aes(x = "", y = value, fill = Class)) +
+    ggplot2::geom_bar(stat = "identity", width = 1) +
+    ggplot2::coord_polar("y", start = 0) +
+    ggplot2::xlab("") +
+    ggplot2::ylab("") +
+    ggplot2::scale_fill_manual(values = andClassesColors) +
+    ggplot2::geom_text(aes(label = perclabels),
+            position = ggplot2::position_stack(vjust = 0.7)) +
+    ggplot2::theme_void()
+plot(andpie)
+
+# -----------------
+# Scatter plot tridimensional
+# -----------------
+ppScat3D <- plotly::plot_ly(auxpats,
+            x = ~TIR,
+            y = ~TAR,
+            z = ~TBR,
+            color = ~ClassLabel,
+            colors = andClassesColors)
+ppScat3D <- ppScat3D %>% plotly::add_markers()
+ppScat3D <- ppScat3D %>% plotly::layout(scene = list(
+            xaxis = list(title = "Time In Range (%)"),
+            yaxis = list(title = "Time Above Range (%)"),
+            zaxis = list(title = "Time Bellow Range (%)")
+))
+ppScat3D
+
+
+# -----------------
+# Scatter plot bidimensional
+# -----------------
+ppScatClasses <- ggplot2::ggplot(auxpats,
+                    ggplot2::aes(x = TIR, y = TBR, colour = ClassLabel)) +
+    ggplot2::geom_point(alpha=0.4, na.rm = TRUE,
+            ggplot2::aes(text=paste("Age:",AgeRange))) +
+    ggplot2::scale_color_manual(name = "Class",
+                                values = andClassesColors) +
+    ggplot2::xlim(0,100) +
+    ggplot2::ylim(0,100) 
+
+
+# Store info
+graphlist_algs$Andiacare <- list(ppScatClasses,
+        gridExtra::tableGrob(andiacare:::tableFromCharVector(cohort$Andiacare)))
+```
+
+### **Breakdown of results**
+
+Same results **splitted by final classification** are:
+
+```{r and_spllitedResByClass, echo = FALSE}
+ppSCSplitted <- ppScatClasses + 
+        ggplot2::facet_wrap(~ ClassLabel) +
+        ggplot2::theme(legend.position = "none")
+plot(ppSCSplitted)
+```
+
+```{r and_classAndage, echo = FALSE}
+out <- ""
+if(flags$Birthdate){
+  body <- "And **splitted by age**:"
+  chunkSplitAge <- '
+    ppSCSplittedAge <- ppScatClasses + 
+            ggplot2::facet_wrap(~ AgeRange) + 
+            ggplot2::theme(legend.position = "none")
+    plot(ppSCSplittedAge)
+  '
+  out <- paste("\n",
+    body,
+    "\n",
+    chunks(chunkSplitAge,"and_classAndAgePlot, echo = FALSE"),
+    sep = "\n")
+}
+```
+
+`r paste(knitr::knit(text = out), collapse = '\n')`

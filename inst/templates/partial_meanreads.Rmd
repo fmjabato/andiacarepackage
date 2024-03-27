@@ -1,0 +1,90 @@
+## **Daily reads**
+
+```{r mreads_setup, echo = FALSE}
+plotMReads <- function(df, y, ytitle, x = "MeanReads", 
+                xtitle = "Mean daily reads"){
+
+    ggplot2::ggplot(df, ggplot2::aes_string(x = x, y = y)) +
+        ggplot2::geom_point(alpha = 0.2, na.rm = TRUE) +
+        ggplot2::xlab(xtitle) +
+        ggplot2::ylab(ytitle) +
+        ggplot2::ylim(c(0,100)) +
+        ggplot2::stat_smooth(method = "lm", , na.rm = TRUE,
+                    formula = y ~ poly(x, 4),
+                    se = FALSE)
+}
+
+threshold_bluefalg <- 10
+
+bfColors <- c("seashell3", "slateblue")
+names(bfColors) <- c("Correct usage", "Bad ussage (Blue Flag)")
+```
+
+This sections is focused on devices usage studying mean daily reads from device.
+
+First, we inspect main time ranges distributions based on daily reads:
+
+```{r mread_plots, echo = FALSE}
+if (flags$TIR) plotMReads(cohort, y = "TIR", ytitle = "Time In Range (%)")
+if (flags$TAR) plotMReads(cohort, y = "TAR", ytitle = "Time Above Range (%)")
+if (flags$TBR) plotMReads(cohort, y = "TBR", ytitle = "Time Bellow Range (%)")
+if (flags$CV) plotMReads(cohort, y = "CV", ytitle = "Variance Coefficient (%)")
+```
+
+Also, we have implemented a **warning system** to mark which patients are not using correctly their devices. 
+
+Specifically, we have implemented the **Blue Flag** for low adherence patientes which uses the device **less than `r threshold_bluefalg` times per day**.
+
+If we inspect Blue Flag for this cohort, we can observe the following distribution:
+```{r blueflag, echo = FALSE}
+cohort$BlueFlag <- andiacare::isBlueAndiacare(cohort,
+                                              logical = FALSE,
+                                              thr = threshold_bluefalg)
+
+graph_bf <- ggplot2::ggplot(data = cohort, ggplot2::aes(y = BlueFlag,
+                                                        fill = BlueFlag)) +
+            ggplot2::geom_bar(position = "stack") +
+            ggplot2::scale_fill_manual(values = bfColors, na.value = "dimgrey") +
+            ggplot2::ylab("Blue Flag identifier") +
+            ggplot2::xlab("Cohort")
+
+tableBF <- andiacare:::tableFromCharVector(cohort$BlueFlag)
+
+gridExtra::grid.arrange(graph_bf,
+                        gridExtra::tableGrob(tableBF),
+                        layout_matrix = matrix(c(1, 1, 2), nrow = 1))
+
+if(flags$Source){
+    auxBFS <- cohort[,c("BlueFlag","Source")]
+    auxBFS$Count <- rep(1,nrow(auxBFS))
+    graph_bfs <- ggplot2::ggplot(data = auxBFS, ggplot2::aes(x = Source,
+                                                        y = Count,
+                                                        fill = BlueFlag,
+                                                        colour = BlueFlag)) +
+            ggplot2::geom_bar(stat = "identity") +
+            ggplot2::ylab("Blue Flag count") +
+            ggplot2::xlab("Source") +
+            ggplot2::scale_fill_manual(values = bfColors, na.value = "dimgrey") +
+            ggplot2::scale_colour_manual(values = bfColors, na.value = "dimgrey") +
+            ggplot2::theme(axis.text.x = ggplot2::element_blank(),
+                            axis.title.x = ggplot2::element_blank(),
+                            axis.ticks.x = ggplot2::element_blank())
+
+    graph_bfs_perc <- ggplot2::ggplot(data = auxBFS, ggplot2::aes(x = Source,
+                                                        y = Count,
+                                                        fill = BlueFlag,
+                                                        colour = BlueFlag)) +
+            ggplot2::geom_bar(stat="identity", position = "fill") +
+            ggplot2::scale_y_continuous(labels = scales::percent) +
+            ggplot2::ylab("Blue Flag distribution (%)") +
+            ggplot2::xlab("Source") +
+            ggplot2::scale_fill_manual(values = bfColors, na.value = "dimgrey") +
+            ggplot2::scale_colour_manual(values = bfColors, na.value = "dimgrey") +
+            ggplot2::theme(axis.text.x =
+                ggplot2::element_text(angle = 30,
+                                    vjust = 1,
+                                    hjust=1))
+    plot(graph_bfs)
+    plot(graph_bfs_perc)
+}
+```

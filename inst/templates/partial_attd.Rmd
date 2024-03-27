@@ -1,0 +1,81 @@
+## **ATTD19 consensus targets**
+
+```{r attd_setup, echo = FALSE}
+meetT_patients <- list()
+invisible(lapply(possible_targets,function(txr){
+    if(txr %in% colnames(cohort)){
+        meetT_patients[[strsplit(txr,"_")[[1]][2]]] <<- which(cohort[, txr])
+    }
+}))
+
+indxMeet <- Reduce(intersect, meetT_patients)
+indxMeetNS <- Reduce(intersect, meetT_patients[c("TIR","TAR","TBR")])
+```
+
+At this section, we focus on ATTD 2019 consensus where some targets were fixed. Those targets, which are applied here, are:
+
+- Time In Range (TIR) > 70%
+- Time Bellow Range (TBR) < 4%
+- Time Above Range (TAR) < 25%
+- Time Bellow Range Severe (TBRS) < 1%
+- Time Above Range Severe (TARS) < 5%
+
+Checking our patients we obtain following distribution:
+```{r attd_venn, echo = FALSE}
+vennColors <- rangesColors[names(meetT_patients)]
+
+silent <- futile.logger::flog.threshold(futile.logger::ERROR,
+                                        name = "VennDiagramLogger")
+vd <- VennDiagram::venn.diagram(meetT_patients,
+        fill = vennColors,
+        alpha = rep(0.5, length(vennColors)),
+        print.mode = c("raw", "percent"),
+        filename = NULL)
+grid::grid.newpage()
+grid::grid.draw(vd)
+```
+
+And a correlation study for patients which reach **all targets (`r length(indxMeet)`)**, not severe targets and all which not meet all the targets:
+```{r attd_corr, echo = FALSE, warning=FALSE}
+if(length(indxMeet) > 2) gridExtra::grid.arrange(
+    andiacare::corrChart(cohort[indxMeet, ]),
+    top = grid::textGrob("Meet all targets",
+        gp = grid::gpar(fontsize = 20, font = 3)))
+if(length(indxMeetNS) > 2) gridExtra::grid.arrange(
+    andiacare::corrChart(cohort[indxMeetNS, ]),
+    top = grid::textGrob("Meet all (not severe) targets",
+        gp = grid::gpar(fontsize = 20, font = 3)))
+if(nrow(cohort) - length(indxMeet) > 2){
+    auxIndx <- setdiff(seq(nrow(cohort)), indxMeet)
+    gridExtra::grid.arrange(andiacare::corrChart(cohort[auxIndx, ]),
+        top = grid::textGrob("Not meet all targets",
+            gp = grid::gpar(fontsize = 20, font = 3)))
+
+}
+```
+
+
+Now, a distributions for cohort which meet all main targets (TIR, TAR and TBR) and which not is:
+```{r attd_tables, echo = FALSE, warning=FALSE}
+tableMeet <- andiacare::statsTable(cohort[indxMeet,],
+                title = "Meet all targets")
+tableMeetNS <- andiacare::statsTable(cohort[indxMeetNS,],
+                title = "Meet all (not severe) targets")
+tableNotMeet <- andiacare::statsTable(cohort[-indxMeet,],
+                title = "Not meet all targets")
+
+# Render
+gridExtra::grid.arrange(tableMeet, tableMeetNS, ncol = 2)
+gridExtra::grid.arrange(tableNotMeet)
+```
+
+```{r attd_age_setup, echo = FALSE}
+cout <- "\n\n"
+
+if(flags$Birthdate){
+    cout <- paste0(knitr::knit_expand("partial_attd_age.Rmd"),
+                    "\n\n")
+}
+```
+
+`r paste(c(knitr::knit(text = paste(cout,collapse = "\n")),"\n"),collapse = "\n")`

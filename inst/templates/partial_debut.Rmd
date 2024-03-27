@@ -1,0 +1,32 @@
+## **Debut stats**
+This section includes stats about patients debut:
+
+```{r debut_plots, echo = FALSE}
+auxYearDebutDistro <- andiacare:::tableFrom2Columns(cohort,
+                                                    c("DebutYear","DebutMonth"))
+ggplot2::ggplot(data = auxYearDebutDistro, ggplot2::aes(x = DebutYear,
+                                                        y = DebutMonth,
+                                                        fill = Value)) +
+    ggplot2::geom_tile() + 
+    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, 
+                                                      vjust = 0.5, 
+                                                      hjust=1))
+
+h1 <- ggplot2::ggplot(data = cohort, ggplot2::aes(x = IllnessYears)) +
+        ggplot2::geom_histogram(binwidth = 1) +
+        ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, 
+                                                          vjust = 0.5, 
+                                                          hjust=1))
+if(flags$Birthdate){
+    h2 <- ggplot2::ggplot(data = cohort, ggplot2::aes(x = DebutAge)) +
+            ggplot2::geom_histogram(binwidth = 1) +
+            ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 90, 
+                                                              vjust = 0.5, 
+                                                              hjust=1))
+
+    gridExtra::grid.arrange(h1, h2, ncol = 2)    
+}else{
+    plot(h1)
+}
+
+```

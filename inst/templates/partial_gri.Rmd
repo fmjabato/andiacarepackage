@@ -1,0 +1,155 @@
+## **GRI**
+
+```{r gri_setup, echo = FALSE}
+classes <- andiacare::allowedDiabetesClassifiers()$GRI$Classes(meta = TRUE)
+griClassesColors <- classes$Color
+names(griClassesColors) <- classes$Class
+classesAreas <- as.data.frame(do.call(rbind,lapply(rev(seq(nrow(classes))),
+  function(i){
+    Hypo <- c(classes$HypoCmin[i],classes$HypoCmax[i])
+    Hyper <- c(classes$HyperCmin[i],classes$HyperCmax[i])
+    cls <- classes$Class[i]
+    corners <- data.frame(
+                  Hyper = c(0,      0,      Hyper[2],Hyper[1]),
+                  Hypo  = c(Hypo[1],Hypo[2],0,       0))
+    corners$Group <- rep(paste0('GRI',cls),4)
+    N <- nrow(corners)
+    colnames(corners) <- c('Hyper','Hypo','Group')
+    return(cbind(data.frame(Class = rep(cls,N),
+                            Color = rep(classes$Color[i],N)),
+                 corners))
+})))
+cohort$GRI <- factor(cohort$GRI, levels = classes$Class)
+```
+
+The algorithm _glycemia Risk Index_ (GRI) it's an [external algorithm](https://journals.sagepub.com/doi/10.1177/19322968221085273) and applies a triage classification using colors. It's based on an index calculated using Time in Range (TIR), Bellow (Low) and Above (High), including severe hyperglycemia events (VHigh; >250 mg/dL) and sever hipoglycemia events (VLow; <54 mg/dL).
+
+If necessary info is not available, patient can be classified as _Unclassified_. It could be caused by NAs presence.
+
+Formulas used by this algorithm are:
+
+$$HypoC = VLow + (0.8 * Low) $$
+$$HyperC = VHigh + (0.5 * Low)$$
+$$GRI = (3 * HypoC) + (1.6 * HyperC)$$
+
+
+A bidimensional representation of this algorithm classifier is:
+
+```{r gri_classes, echo = FALSE}
+# Plot area by are to handle overlapping
+ppArea <- ggplot2::ggplot()
+invisible(sapply(unique(classesAreas$Class),function(cl){
+  ppArea <<- ppArea + 
+        ggplot2::geom_polygon(data = classesAreas[classesAreas$Class == cl,],
+                              mapping = ggplot2::aes(x = Hyper, y = Hypo,
+                                 fill = Class, group = Group)) 
+}))
+ppArea <- ppArea + 
+          ggplot2::scale_fill_manual(name = 'Class',
+                                    values = griClassesColors,
+                                    labels = names(griClassesColors)) +
+          ggplot2::xlim(0,65) + 
+          ggplot2::ylim(0,35)
+
+plot(ppArea)
+```
+
+### **Cohort results**
+
+Applying the algorithm to `r nrow(cohort)` cohort, we obtain the following distribution:
+
+```{r gri_plotCohortResults, echo = FALSE} 
+aux <- as.data.frame(table(cohort$GRI))
+N <- nrow(cohort)
+colnames(aux) <- c("label","value")
+aux$color <- as.vector(sapply(seq(nrow(aux)),function(i){
+  return(griClassesColors[which(names(griClassesColors) == aux$label[i])])
+}))
+aux$perclabels <- paste(round(aux$value/sum(aux$value) * 100, 2), "%")
+aux$Class <- paste0(aux$label, " (", aux$value, ")")
+
+
+classes$Label <- sapply(seq(nrow(classes)),function(i){
+  count <- aux$value[which(aux$label == classes$Class[i])]
+  if(length(count) == 0) count = 0
+  return(paste0(classes$Class[i]," (",
+                count,")"))
+})
+
+toinclude <- c('HypoglycemiaC','HyperglycemiaC',"GRI","GRIVal")
+if(flags$Birthdate) toinclude <- c(toinclude, "AgeRange")
+if(flags$Source) toinclude <- c(toinclude, "Source")
+
+auxpats <- cohort[,toinclude]
+auxpats$ClassLabel <- sapply(auxpats$GRI,function(cl){
+  return(classes$Label[which(classes$Class == cl)[1]])
+})
+
+# levels(auxpats$ClassLabel) <- classes$Label
+names(griClassesColors) <- classes$Label
+auxpats$ClassLabel <- factor(auxpats$ClassLabel, levels = classes$Label) 
+ppScatClasses <- ggplot2::ggplot(auxpats, 
+                    ggplot2::aes(x = HyperglycemiaC, 
+                      y = HypoglycemiaC, 
+                      colour = ClassLabel,
+                      text = paste("Age:", AgeRange, "\nGRIVal", GRIVal))) +
+       ggplot2::geom_point(alpha=0.4, na.rm = TRUE) +
+       ggplot2::scale_color_manual(name = "Class",
+                                values = griClassesColors) +
+       ggplot2::xlim(0,65) +
+       ggplot2::ylim(0,35) 
+# Pieplot
+# rAmCharts::amPie(data = aux, inner_radius = 50, depth = 15)
+aux <- aux[aux$value > 0,]
+gripie <- ggplot2::ggplot(aux, ggplot2::aes(x = "", y = value, fill = Class)) +
+    ggplot2::geom_bar(stat = "identity", width = 1) +
+    ggplot2::coord_polar("y", start = 0) +
+    ggplot2::xlab("") +
+    ggplot2::ylab("") +
+    ggplot2::scale_fill_manual(values = griClassesColors) +
+    ggplot2::geom_text(aes(label = perclabels),
+            position = ggplot2::position_stack(vjust = 0.5)) +
+    ggplot2::theme_void()
+plot(gripie)
+
+
+# Scatter plot
+plotly::ggplotly(ppScatClasses) %>% 
+  plotly::layout(xaxis = list(fixedrange = TRUE), 
+                yaxis = list(fixedrange = TRUE))
+
+# Store info
+graphlist_algs$GRI <- list(ppScatClasses,
+        gridExtra::tableGrob(andiacare:::tableFromCharVector(cohort$GRI)))
+```
+
+### **Breakdown of results**
+
+Same results **splitted by final classification** are:
+
+```{r gri_spllitedResByClass, echo = FALSE}
+ppSCSplitted <- ppScatClasses + 
+        ggplot2::facet_wrap(~ ClassLabel) + 
+        ggplot2::theme(legend.position = "none")
+plot(ppSCSplitted)
+```
+
+```{r gri_classAndAge, echo = FALSE}
+out <- ""
+if(flags$Birthdate){
+  body <- "And **splitted by age**:"
+  chunkSplitAge <- '
+    ppSCSplittedAge <- ppScatClasses + 
+            ggplot2::facet_wrap(~ AgeRange) + 
+            ggplot2::theme(legend.position = "none")
+    plot(ppSCSplittedAge)
+  '
+  out <- paste("\n",
+    body,
+    "\n",
+    chunks(chunkSplitAge,"and_classAndAgePlot, echo = FALSE"),
+    sep = "\n")
+}
+```
+
+`r paste(knitr::knit(text = out), collapse = '\n')`

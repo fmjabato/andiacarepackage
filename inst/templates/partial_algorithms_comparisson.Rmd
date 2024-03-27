@@ -1,0 +1,75 @@
+## **Algorithms comparisson**
+
+```{r alg_comp_setup, echo = FALSE}
+# All posible nodes and their colors
+nodeDomains <- c(paste0("And:",names(andClassesColors)),
+                paste0("GRI:",names(griClassesColors)))
+nodeDomains <- gsub(" \\([0-9]*\\)", "", nodeDomains)
+nodeRanges <- c(as.vector(andClassesColors), 
+                as.vector(griClassesColors))
+
+
+
+nodeColors <- paste0('d3.scaleOrdinal()', 
+              '.domain(["',paste(nodeDomains,collapse='","'),'"])',
+              '.range(["',paste(nodeRanges,collapse='","'),'"])')
+```
+
+A quick comparisson of algorithms is:
+
+```{r alg_comparisson, echo = FALSE}
+combined_algsGraphs <- list()
+for(i in seq_along(graphlist_algs[[1]])){
+    combined_algsGraphs <- append(combined_algsGraphs, lapply(graphlist_algs,
+                function(entryAlg){
+        entryAlg[[i]]
+    }))
+}
+
+gridExtra::grid.arrange(grobs = combined_algsGraphs, ncol = sum(unlist(algorithms)))
+```
+
+```{r alg_sankey, echo = FALSE}
+patientsClasses <- data.frame(source = character(0),
+                                target = character(0),
+                                value = numeric(0),
+                                IDSource = numeric(0),
+                                IDTarget = numeric(0))
+
+# TODO currently only compares Andiacare and GRI, it's not dynamic
+invisible(lapply(seq(nrow(cohort)),function(i){
+    andiacare <- paste0("And:",cohort$Andiacare[i])
+    gri <- paste0("GRI:",cohort$GRI[i])
+    indxAnd <- which(patientsClasses$source == andiacare)
+    indxGRI <- which(patientsClasses$target == gri)
+    indxTarget <- intersect(indxAnd, indxGRI)
+    if(length(indxTarget) <= 0){ # New entry
+        patientsClasses <<- rbind(patientsClasses,
+            data.frame(source = andiacare,
+                        target = gri,
+                        value = 0,
+                        IDSource = -1,
+                        IDTarget = -1))
+        indxTarget <- nrow(patientsClasses)
+    }
+    patientsClasses$value[indxTarget] <<- patientsClasses$value[indxTarget] + 1 
+}))
+nodes <- unique(c(patientsClasses$source, patientsClasses$target))
+invisible(lapply(seq_along(nodes),function(i){
+    if(grepl("And:",nodes[i])){
+        patientsClasses$IDSource[which(patientsClasses$source == 
+            nodes[i])] <<- i - 1 # Zero indexed
+    }
+    if(grepl("GRI:",nodes[i])){
+        patientsClasses$IDTarget[which(patientsClasses$target == 
+            nodes[i])] <<- i - 1 # Zero indexed
+    }
+}))
+nodes <- data.frame(name = nodes)
+
+networkD3::sankeyNetwork(Links = patientsClasses, Nodes = nodes,
+                     Source = "IDSource", Target = "IDTarget",
+                     Value = "value", NodeID = "name",
+                     sinksRight = FALSE, nodeWidth = 40, fontSize = 13,
+                     nodePadding = 20, colourScale = nodeColors)
+```

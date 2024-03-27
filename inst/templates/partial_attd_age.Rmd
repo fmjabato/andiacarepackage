@@ -1,0 +1,76 @@
+```{r setup_att_byAge, echo = FALSE}
+targets = c("TIR", "TBR", "TBRS", "TAR", "TARS", "GMI", "MeanReads",
+                "SourceSize")
+targets <- targets[targets %in% colnames(cohort)]
+
+# Check problematic variables (possible to be all the same)
+if("SourceSize" %in% targets){
+    if(length(unique(cohort$SourceSize)) <= 1){
+        targets <- targets[targets != "SourceSize"]
+    }
+}
+
+# Check possible Age errors
+thr <- 2
+auxAges <- table(cohort$AgeRange)
+toRemoveBool <- rep(FALSE, nrow(cohort))
+if (any(auxAges <= thr & auxAges > 0)) {
+    toRemoveAges <- names(auxAges[auxAges <= thr])
+    toRemoveBool <- cohort$AgeRange %in% toRemoveAges
+}
+```
+
+Finally, cohort stats stratified by their age range:
+```{r attd_table_byAge, echo = FALSE}
+age_ranges <- sort(unique(cohort$AgeRange))
+meansMatrix <- matrix(ncol = 0, nrow = 0)
+
+ageATTDTables <- lapply(age_ranges, function(rnge){
+    auxCohort <- cohort[cohort$AgeRange == rnge, ]
+    rawTable <- andiacare::statsTable(auxCohort, decimals = 2)
+    renderedTable <- andiacare::statsTable(auxCohort,
+                title = as.character(rnge),
+                boolTargets = possible_targets)
+    # Export
+    info <- paste(rawTable[, "mean"], rawTable[, "sd"], sep = "±")
+    if(ncol(meansMatrix) == 0){
+        meansMatrix <<- matrix(info, ncol = 1)
+        rownames(meansMatrix) <<- rownames(rawTable)
+    }else{
+        meansMatrix <<- cbind(meansMatrix, info)
+    }
+    return(renderedTable)
+})
+colnames(meansMatrix) <- age_ranges
+gridExtra::grid.arrange(gridExtra::tableGrob(meansMatrix))
+
+invisible(lapply(seq(1, length(ageATTDTables), 2), function(i){ # Plot in pairs
+    if(length(ageATTDTables) >= i+1){
+        gridExtra::grid.arrange(ageATTDTables[[i]], ageATTDTables[[i+1]],
+            ncol = 2)
+    }else{
+        gridExtra::grid.arrange(ageATTDTables[[i]])
+    }
+}))
+```
+
+In order to study significant differences between age ranges, a statistical test is used. We assume that sets have different sizes and variances homogeneity can have bias. For that reason the **Games-Howell test**. Interpretation instructions are [here](https://rpkgs.datanovia.com/rstatix/reference/games_howell_test.html). `r ifelse(any(toRemoveBool), paste0("Also a pull of (",sum(toRemoveBool),") patients have been removed because they are unique in their age range. "), "")`A table with all results is shown:
+```{r attd_age_differences, echo = FALSE, warning=FALSE}
+includeIndx <- seq(nrow(cohort))
+if(any(toRemoveBool)){
+    includeIndx <- includeIndx[!toRemoveBool]
+}
+statTestsByAge <- as.data.frame(do.call(rbind, lapply(targets, function(trg){
+    rstatix::games_howell_test(cohort[includeIndx,c(trg, "AgeRange")],
+            formula(paste0(trg, " ~ AgeRange")),
+            conf.level = 0.95,
+            detailed = TRUE)
+})))
+
+statTestsByAge$.y. <- as.factor(statTestsByAge$.y.)
+statTestsByAge$group1 <- as.factor(statTestsByAge$group1)
+statTestsByAge$group2 <- as.factor(statTestsByAge$group2)
+statTestsByAge$p.adj.signif <- as.factor(statTestsByAge$p.adj.signif)
+DT::datatable(statTestsByAge, filter = 'top', options = list(pageLength = 10,
+    autoWidth = TRUE))
+```

@@ -1,0 +1,22 @@
+**Age stats**
+Patients distribution by age is:
+
+```{r age_plots, echo = FALSE}
+auxAges <- table(cohort$AgeRange)
+auxAges <- data.frame(Age = factor(names(auxAges),
+                            levels = levels(cohort$AgeRange)),
+                    Amount = as.vector(auxAges))
+auxAges <- auxAges[order(auxAges$Age),]
+auxAges$Label <- paste0(as.character(auxAges$Age),
+                    " (", auxAges$Amount, ")")
+auxAges$Label <- factor(auxAges$Label, levels = auxAges$Label)
+
+ggplot2::ggplot(data = auxAges, ggplot2::aes(x = Label,
+                                            y = Amount,
+                                            fill = Label)) +
+            ggplot2::geom_bar(stat = "identity") +
+            ggplot2::coord_flip() +
+            ggplot2::xlab("") +
+            ggplot2::ylab("") +
+            ggplot2::theme(legend.position = "none")
+```

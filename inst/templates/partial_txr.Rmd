@@ -1,0 +1,216 @@
+## **Targets stats**
+```{r txr_setup, echo = FALSE, warning=FALSE}
+############ T*R SETS
+txrSet <- as.data.frame(do.call(rbind, lapply(seq(nrow(cohort)), function(i) {
+    df <- data.frame(Value = numeric(0),
+                    Type = character(0),
+                    Patient = numeric(0),
+                    Source = character(0))
+    source <- ifelse(flags$Source, as.character(cohort$Source[i]), "Cohort")
+
+    if(flags$TIR) df <- rbind(df,list(cohort$TIR[i], "TIR", i, source))
+    if(flags$TBR) df <- rbind(df,list(cohort$TBR[i], "TBR", i, source))
+    if(flags$TBRS) df <- rbind(df,list(cohort$TBRS[i], "TBRS", i, source))
+    if(flags$TAR) df <- rbind(df,list(cohort$TAR[i], "TAR", i, source))
+    if(flags$TARS) df <- rbind(df,list(cohort$TARS[i], "TARS", i, source))
+
+    colnames(df) <- c("Value", "Type", "Patient", "Source")
+    return(df)
+})))
+txrSet$Type <- factor(txrSet$Type, levels = c("TARS","TAR","TIR","TBR","TBRS"))
+
+basetargets <- c("TARS", "TAR", "TIR", "TBR", "TBRS")
+possible_targets <- paste0("ATTD19_", basetargets)
+possible_targets_label <- paste0(possible_targets, "Lbl")
+
+txrStats <- andiacare::statsTable(cohort,
+            boolTargets = c(possible_targets, "AllTargets"),
+            toPlot = TRUE)
+
+attdtir_values <- c("Out of DM1 target", "In DM1 target (TIR > 70%)")
+attdtbr_values <- c("Out of DM1 target", "In DM1 target (TBR < 4%)")
+attdtar_values <- c("Out of DM1 target", "In DM1 target (TAR < 25%)")
+
+
+rangesColors <- c(
+    TIR = "chartreuse3",
+    TBR = "aquamarine2",
+    TBRS = "cadetblue",
+    TAR = "coral",
+    TARS = "coral4"
+)
+
+graphTXR <- function(df, target, ylab, ythr){
+    auxTXR <- data.frame(
+        Value = df[, target],
+        Type = rep(
+            "Cohort",
+            length(df[, target])
+        )
+    )
+    auxColor <- rangesColors[[target]]
+
+    graph_tXr <- ggplot2::ggplot(auxTXR, ggplot2::aes(x = Type, y = Value)) +
+        ggdist::stat_halfeye(
+            adjust = .5, width = .6, justification = -.2,
+            .width = 0, point_colour = NA, na.rm = TRUE
+        ) +
+        ggplot2::geom_boxplot(ggplot2::aes(fill = Value),
+            width = .12, outlier.color = NA,
+            na.rm = TRUE
+        ) +
+        ggplot2::scale_fill_manual(values = auxColor) +
+        ggdist::stat_dots(
+            side = "left", justification = 1.1,
+            binwidth = .25, na.rm = TRUE
+        ) +
+        ggplot2::coord_cartesian(xlim = c(1, NA)) +
+        ggplot2::ylab(ylab) +
+        ggplot2::xlab("") +
+        ggplot2::ylim(c(0, 100)) +
+        ggplot2::geom_hline(yintercept = ythr, linetype = "dotted") +
+        ggplot2::theme(legend.position = "none")
+    
+    return(graph_tXr)
+}
+
+```
+
+
+
+Patients distribution depending on their TIR/TAR/TBR:
+```{r txr_tir, echo = FALSE, warning=FALSE}
+gridExtra::grid.arrange(txrStats)
+targetTitles <- c(TARS = "Time Above Range Severe (%)",
+                  TAR = "Time Above Range (%)",
+                  TIR = "Time In Range (%)",
+                  TBR = "Time Bellow Range (%)",
+                  TBRS = "Time Bellow Range Severe (%)")
+targetThrs <- c(TARS = 5,
+                  TAR = 25,
+                  TIR = 70,
+                  TBR = 4,
+                  TBRS = 1)
+txrGraphs <- lapply(basetargets[basetargets %in% colnames(cohort)],
+    function(trg){ graphTXR(cohort, trg, targetTitles[trg], targetThrs[trg]) })
+
+invisible(lapply(seq(1, length(txrGraphs), 2), function(i) { # Plot in pairs
+    if (length(txrGraphs) >= i + 1) {
+        gridExtra::grid.arrange(txrGraphs[[i]], txrGraphs[[i + 1]], ncol = 2)
+    } else {
+        gridExtra::grid.arrange(txrGraphs[[i]], ncol = 2)
+    }
+}))
+
+```
+
+```{r txr_source_comp, echo = FALSE, warning=FALSE}
+out_txr <- ""
+if(flags$Source){
+        # useful function
+    plotViolinTXR <- function(rangeType, label, withX = TRUE){
+        pp <- ggplot2::ggplot(cohort, ggplot2::aes_string(x = "Source",
+                                                        y = rangeType,
+                                                        fill = "Source")) +
+                ggplot2::geom_violin(na.rm = TRUE) +
+                ggplot2::ylab(label) +
+                ggplot2::theme(axis.text.x =
+                    ggplot2::element_text(angle = 30,
+                                        vjust = 1,
+                                        hjust=1)) +
+                ggplot2::geom_vline(xintercept = hospitalsSWEETCuts,
+                                    linetype = "dotted") +
+                ggplot2::theme(legend.position = "none")
+        if(!withX){
+            pp <- pp + ggplot2::theme(axis.text.x = ggplot2::element_blank(),
+                                    axis.title.x = ggplot2::element_blank(),
+                                    axis.ticks.x = ggplot2::element_blank())
+        }
+        return(pp)
+    }
+
+    height <- 4
+    increaseByGraph <- 3
+
+    graph_tir_sources <- plotViolinTXR("TIR","Time In Range (%)",
+                                        !any(c(flags$TBR, flags$TAR)))
+    code_txr <- "gridExtra::grid.arrange(graph_tir_sources,"
+
+    if(flags$TBR){
+        graph_tbr_sources <- plotViolinTXR("TBR","Time Bellow Range (%)",
+                                            !flags$TAR)
+        code_txr <- paste0(code_txr, "graph_tbr_sources,")
+        height <- height + increaseByGraph
+    } 
+
+    if(flags$TBR){
+        graph_tar_sources <- plotViolinTXR("TAR", "Time Avobe Range (%)")
+        code_txr <- paste0(code_txr,"graph_tar_sources,")
+        height <- height + increaseByGraph
+    } 
+    code_txr <- paste0(code_txr, "ncol=1)")
+    out_txr <- paste("\n\nAnd a comparisson of TIR/TAR/TBR along sources:\n\n",
+                    chunks(code_txr,paste0("echo = FALSE, fig.height=",
+                                    height)), sep = "\n")
+
+}
+```
+`r paste(knitr::knit(text = paste(out_txr,collapse = "\n")),collapse = "\n")`
+
+
+Now a plot of Ranges percentages for all patients is shown. Patients have been **sorted in increasing order by their TIR values**:
+```{r txr_pats, echo = FALSE}
+auxTIRs <- txrSet$Value[txrSet$Type == "TIR"]
+txrSet$Order <- txrSet$Patient
+txrSet$Patient <- as.character(txrSet$Patient)
+names(auxTIRs) <- unique(txrSet$Patient)
+auxTIRs <- sort(auxTIRs, decreasing = FALSE)
+invisible(lapply(seq_along(auxTIRs),function(i){
+    indx <- which(txrSet$Patient == names(auxTIRs)[i])
+    txrSet$Order[indx] <<- rep(i, length(indx))
+}))
+txrSet <- txrSet[order(txrSet$Order, decreasing = FALSE), ]
+txrSet$Order <- factor(txrSet$Order, levels = seq_along(auxTIRs))
+
+# Adjust TXR set
+auxNAs <- is.na(txrSet$Value)
+if(any(auxNAs)) txrSet$Value[auxNAs] <- 0
+invisible(lapply(unique(txrSet$Patient),function(pat){
+    indx <- which(txrSet$Patient == pat)
+    auxSet <- txrSet[indx,]
+    if (flags$TBRS & flags$TBR) {
+        indxTBR <- which(auxSet$Type == "TBR")
+        indxTBRS <- which(auxSet$Type == "TBRS")
+        txrSet$Value[indx[indxTBR]] <<- auxSet$Value[indxTBR] -
+            auxSet$Value[indxTBRS]
+    }
+    if(flags$TARS & flags$TAR){
+        indxTAR <- which(auxSet$Type == "TAR")
+        indxTARS <- which(auxSet$Type == "TARS")
+        txrSet$Value[indx[indxTAR]] <<- auxSet$Value[indxTAR] - 
+                                        auxSet$Value[indxTARS]
+    }
+}))
+
+# Plot
+graph_plots <- ggplot2::ggplot(data = txrSet, ggplot2::aes(x = Order,
+                                                            y = Value,
+                                                            fill = Type)) +
+                ggplot2::geom_bar(stat = "identity", position = "fill",
+                        ggplot2::aes(colour = Type)) +
+                ggplot2::scale_y_continuous(labels = scales::percent) +
+                ggplot2::scale_fill_manual(values = rangesColors) +
+                ggplot2::scale_colour_manual(values = rangesColors) +
+                ggplot2::ylab("Ranges (%)") +
+                ggplot2::xlab("Patients") +
+                ggplot2::guides(colour = "none") +
+                ggplot2::theme(axis.text.x = ggplot2::element_blank(),
+                                axis.ticks.x = ggplot2::element_blank())
+plot(graph_plots)
+
+if(flags$Source){
+    plot(graph_plots + ggplot2::facet_wrap(~Source))
+}
+```
+
+

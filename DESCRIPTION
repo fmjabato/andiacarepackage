@@ -1,0 +1,15 @@
+Package: andiacare
+Title: Andiacare Diabetes classifiers aggregator
+Version: 0.9.1
+Authors@R: 
+    c(person("Fernando", "M. Jabato", , "fmjabato@gmail.com", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0001-7498-1962")),
+    person("Isabel", "Leiva", , "", role = c("aut"),
+           comment = c(ORCID = "YOUR-ORCID-ID")))
+Description: "Handle Diabetes classification algorithms to perform automatic studies.\nThose studies must use digital glucometers which offers automatic registers from patients.\nThis package handle a single dataset (like a moment data point) and evolution of patients (timeseries). Automatic graphs and reports can be rendered with regular functions already implemented."
+License: MIT + file LICENSE
+Encoding: UTF-8
+Suggests: testthat
+biocViews: Software, Classification, TimeCourse, ReportWriting
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
