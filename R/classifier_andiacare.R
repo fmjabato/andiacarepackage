@@ -2,7 +2,7 @@
 #' @param cohort dataframe to be checked
 #' @param cnames (Optional) list with columnames relations
 #' @return TRUE if Andiacare algorithm can be applied or FALSE in other cases
-#' @author Fernando Moreno Jabato <fmjabato(at)gmail(dot)com>
+#' @author Fernando Moreno Jabato <jabato(at)uma(dot)com>
 checkAndiacare <- function(cohort, cnames = NULL){
     auxNames <- colnames(cohort)
     if(!is.null(cnames)){
@@ -21,7 +21,7 @@ checkAndiacare <- function(cohort, cnames = NULL){
 #' Returns, ordered, from most to less severe, all classifier functions 
 #' implemented for Andiacare.
 #' @return vector with ordered allowed class leveles
-#' @author Fernando Moreno Jabato <fmjabato(at)gmail(dot)com>
+#' @author Fernando Moreno Jabato <jabato(at)uma(dot)com>
 andiacareClassifiers <- function(){
   return(c(isRedAndiacare, isOrangeAndiacare, isYellowAndiacare,
             isGreenAndiacare))
@@ -31,7 +31,7 @@ andiacareClassifiers <- function(){
 #' Returns, ordered, from most to less severe, all class levels implemented 
 #' @param meta if TRUE, returns also specified metainfo per class
 #' @return vector with ordered allowed class leveles
-#' @author Fernando Moreno Jabato <fmjabato(at)gmail(dot)com>
+#' @author Fernando Moreno Jabato <jabato(at)uma(dot)com>
 andiacareClasses <- function(meta = FALSE){
   dummy <- data.frame(A = numeric(0), B = numeric(0))
   classes <- as.data.frame(do.call(rbind,lapply(andiacareClassifiers(),
@@ -41,9 +41,9 @@ andiacareClasses <- function(meta = FALSE){
                         Color = res$color))
   })))
     classes <- rbind(classes,data.frame(Class = "Unclassified",
-                                      Color = "violet"))
+                                      Color = "plum"))
     classes <- rbind(classes,data.frame(Class = "Not allowed",
-                                      Color = "grey"))
+                                      Color = "plum"))
     if(!meta) classes <- classes$Class
   return(classes)
 }
@@ -54,7 +54,7 @@ andiacareClasses <- function(meta = FALSE){
 #' @param cnames (Optional) list with columnames relations
 #' @param type (Optional) select between classify (default) or "extra"
 #' @return vector with patients classes
-#' @author Fernando Moreno Jabato <fmjabato(at)gmail(dot)com>
+#' @author Fernando Moreno Jabato <jabato(at)uma(dot)com>
 andiacareWrapper <- function(df, cnames=NULL, type = "classify"){
   TIRcname <- "TIR"
   TBRcname <- "TBR"
@@ -82,7 +82,7 @@ andiacareWrapper <- function(df, cnames=NULL, type = "classify"){
 #' @param TARcol TAR info column name
 #' @return vector with patients classes
 #' @export
-#' @author Fernando Moreno Jabato <fmjabato(at)gmail(dot)com>
+#' @author Fernando Moreno Jabato <jabato(at)uma(dot)com>
 andiacare <- function(df, TIRcol = 'TIR', TBRcol = 'TBR', TARcol = 'TAR'){
     givenColnames <- list(TIRcol,TBRcol,TARcol)
     innerfunColnames <- c("TIR","TBR","TAR")
@@ -125,7 +125,7 @@ andiacare <- function(df, TIRcol = 'TIR', TBRcol = 'TBR', TARcol = 'TAR'){
 #' @param info dataframe to be checked
 #' @param meta if TRUE, add meta entries to result object
 #' @return logical vector, if TRUE, this patient is Green class
-#' @author Fernando Moreno Jabato <fmjabato(at)gmail(dot)com>
+#' @author Fernando Moreno Jabato <jabato(at)uma(dot)com>
 isGreenAndiacare <- function(info, meta = FALSE){
   # TIR > 70% and TBR < 4% and TAR < 25%
   classification <- info$TIR > 70 & info$TBR < 4 & info$TAR < 25
@@ -142,7 +142,7 @@ isGreenAndiacare <- function(info, meta = FALSE){
 #' @param info dataframe to be checked
 #' @param meta if TRUE, add meta entry to result object
 #' @return logical vector, if TRUE, this patient is Green-Ambar class
-#' @author Fernando Moreno Jabato <fmjabato(at)gmail(dot)com>
+#' @author Fernando Moreno Jabato <jabato(at)uma(dot)com>
 isYellowAndiacare <- function(info, meta = FALSE){
   # 40% < TIR <= 70% or 4% <= TBR < 11% or 25 <= TAR < 50
   classification <- (info$TIR > 40 & info$TIR <= 70) |
@@ -161,7 +161,7 @@ isYellowAndiacare <- function(info, meta = FALSE){
 #' @param info dataframe to be checked
 #' @param meta if TRUE, add meta entry to result object
 #' @return logical vector, if TRUE, this patient is Ambar-Red class
-#' @author Fernando Moreno Jabato <fmjabato(at)gmail(dot)com>
+#' @author Fernando Moreno Jabato <jabato(at)uma(dot)com>
 isOrangeAndiacare <- function(info, meta = FALSE){
   # 25% <= TIR < 40% or 11% <= TBR <= 20% or 50 <= TAR < 75
   classification <- (info$TIR >= 25 & info$TIR < 40) |
@@ -180,14 +180,14 @@ isOrangeAndiacare <- function(info, meta = FALSE){
 #' @param info dataframe to be checked
 #' @param meta if TRUE, add meta entry to result object
 #' @return logical vector, if TRUE, this patient is Red class
-#' @author Fernando Moreno Jabato <fmjabato(at)gmail(dot)com>
+#' @author Fernando Moreno Jabato <jabato(at)uma(dot)com>
 isRedAndiacare <- function(info, meta = FALSE){
   # TIR < 25% or TBR > 20% or 75 <= TAR
   classification <- info$TIR < 25 | info$TBR > 20 | info$TAR >= 75
   res <- list(value = "Red", class = classification)
   classification[is.na(classification)] <- FALSE 
   if(meta){
-    res$color <- "orangered3"
+    res$color <- "darkred"
   } 
   return(res)
 }
@@ -200,7 +200,7 @@ isRedAndiacare <- function(info, meta = FALSE){
 #' @param logical if TRUE returns logical values, if FALSE returns labels
 #' @return logical vector, if TRUE, this patient is Blue flagged
 #' @export
-#' @author Fernando Moreno Jabato <fmjabato(at)gmail(dot)com>
+#' @author Fernando Moreno Jabato <jabato(at)uma(dot)com>
 isBlueAndiacare <- function(info, readsCol = "MeanReads", thr = 4,
                             logical = TRUE){
   blueFlag <- rep(NA,nrow(info))

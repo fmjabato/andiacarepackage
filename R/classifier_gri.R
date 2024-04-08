@@ -2,7 +2,7 @@
 #' @param cohort dataframe to be checked
 #' @param cnames (Optional) list with columnames relations
 #' @return TRUE if GRI algorithm can be applied or FALSE in other cases
-#' @author Fernando Moreno Jabato <fmjabato(at)gmail(dot)com>
+#' @author Fernando Moreno Jabato <jabato(at)uma(dot)com>
 checkGRI <- function(cohort, cnames = NULL){
     auxNames <- colnames(cohort)
     if(!is.null(cnames)){
@@ -22,7 +22,7 @@ checkGRI <- function(cohort, cnames = NULL){
 #' implemented for Glycemia Risk Index (GRI).
 #' Note: doi:10.1177/19322968221085273
 #' @return vector with ordered allowed class leveles
-#' @author Fernando Moreno Jabato <fmjabato(at)gmail(dot)com>
+#' @author Fernando Moreno Jabato <jabato(at)uma(dot)com>
 griClassifiers <- function(){
   return(c(isBrownGRI,isRedGRI,isOrangeGRI,isYellowGRI,isGreenGRI))  
 }
@@ -31,7 +31,7 @@ griClassifiers <- function(){
 #' Returns, ordered, from most to less severe, all class levels implemented 
 #' @param meta if TRUE, returns also specified metainfo per class
 #' @return vector with ordered allowed class leveles
-#' @author Fernando Moreno Jabato <fmjabato(at)gmail(dot)com>
+#' @author Fernando Moreno Jabato <jabato(at)uma(dot)com>
 griClasses <- function(meta = FALSE){
   dummy <- data.frame(A = numeric(0), B = numeric(0), C = numeric(0),
                       D = numeric(0), E = numeric(0))
@@ -46,13 +46,13 @@ griClasses <- function(meta = FALSE){
                         HyperCmax = res$HyperC[2]))
   })))
   classes <- rbind(classes,data.frame(Class = "Unclassified",
-                                      Color = "violet",
+                                      Color = "plum",
                                       HypoCmin = 0,
                                       HypoCmax = 100,
                                       HyperCmin = 0,
                                       HyperCmax = 100))
   classes <- rbind(classes,data.frame(Class = "Not allowed",
-                                      Color = "grey",
+                                      Color = "plum",
                                       HypoCmin = 0,
                                       HypoCmax = 100,
                                       HyperCmin = 0,
@@ -67,7 +67,7 @@ griClasses <- function(meta = FALSE){
 #' @param cnames (Optional) list with columnames relations
 #' @param type (Optional) select between classify (default) or "extra"
 #' @return vector with patients classes
-#' @author Fernando Moreno Jabato <fmjabato(at)gmail(dot)com>
+#' @author Fernando Moreno Jabato <jabato(at)uma(dot)com>
 griWrapper <- function(df, cnames=NULL, type = "classify"){
   TIRcname <- "TIR"
   TBRcname <- "TBR"
@@ -113,7 +113,7 @@ griWrapper <- function(df, cnames=NULL, type = "classify"){
 #' @param TARScol TARS info column name
 #' @export
 #' @return vector with patients classes
-#' @author Fernando Moreno Jabato <fmjabato(at)gmail(dot)com>
+#' @author Fernando Moreno Jabato <jabato(at)uma(dot)com>
 gri <- function(df, TIRcol = 'TIR', TBRcol = 'TBR', TARcol = 'TAR',
                             TBRScol = 'TBRS', TARScol = 'TARS'){
     givenColnames <- list(TIRcol,TBRcol,TARcol,TBRScol,TARScol)
@@ -165,7 +165,7 @@ gri <- function(df, TIRcol = 'TIR', TBRcol = 'TBR', TARcol = 'TAR',
 #' @param TARScol TARS info column name
 #' @return dataframe with extra info
 #' @export
-#' @author Fernando Moreno Jabato <fmjabato(at)gmail(dot)com>
+#' @author Fernando Moreno Jabato <jabato(at)uma(dot)com>
 calculatesGRI <- function(df, TIRcol = 'TIR', TBRcol = 'TBR', TARcol = 'TAR',
                             TBRScol = 'TBRS', TARScol = 'TARS'){
     givenColnames <- list(TIRcol,TBRcol,TARcol,TBRScol,TARScol)
@@ -205,7 +205,7 @@ calculatesGRI <- function(df, TIRcol = 'TIR', TBRcol = 'TBR', TARcol = 'TAR',
 #' @param info dataframe to be checked
 #' @param meta if TRUE, add meta entries to result object
 #' @return logical vector, if TRUE, this patient is Green class
-#' @author Fernando Moreno Jabato <fmjabato(at)gmail(dot)com>
+#' @author Fernando Moreno Jabato <jabato(at)uma(dot)com>
 isGreenGRI <- function(info, meta = FALSE){
   # GRI <= 20
   classification <- info$GRIVal <= 20
@@ -226,7 +226,7 @@ isGreenGRI <- function(info, meta = FALSE){
 #' @param info dataframe to be checked
 #' @param meta if TRUE, add meta entry to result object
 #' @return logical vector, if TRUE, this patient is Green-Ambar class
-#' @author Fernando Moreno Jabato <fmjabato(at)gmail(dot)com>
+#' @author Fernando Moreno Jabato <jabato(at)uma(dot)com>
 isYellowGRI <- function(info, meta = FALSE){
   # 20 < GRI <= 40
   classification <- info$GRIVal > 20 & info$GRIVal <= 40
@@ -247,7 +247,7 @@ isYellowGRI <- function(info, meta = FALSE){
 #' @param info dataframe to be checked
 #' @param meta if TRUE, add meta entry to result object
 #' @return logical vector, if TRUE, this patient is Ambar-Red class
-#' @author Fernando Moreno Jabato <fmjabato(at)gmail(dot)com>
+#' @author Fernando Moreno Jabato <jabato(at)uma(dot)com>
 isOrangeGRI <- function(info, meta = FALSE){
   # 40 < GRI <= 60
   classification <- info$GRIVal > 40 & info$GRIVal <= 60
@@ -268,14 +268,14 @@ isOrangeGRI <- function(info, meta = FALSE){
 #' @param info dataframe to be checked
 #' @param meta if TRUE, add meta entry to result object
 #' @return logical vector, if TRUE, this patient is Red class
-#' @author Fernando Moreno Jabato <fmjabato(at)gmail(dot)com>
+#' @author Fernando Moreno Jabato <jabato(at)uma(dot)com>
 isRedGRI <- function(info, meta = FALSE){
   # 60 < GRI <= 80
   classification <- info$GRIVal > 60 & info$GRIVal <= 80
   res <- list(value = "Red", class = classification)
   classification[is.na(classification)] <- FALSE 
   if(meta){
-    res$color <- "orangered3"
+    res$color <- "darkred"
     res$GRIVal <- c(60,80)
     ranges <- calculatesMetaPolygonsGRI(res$GRIVal[1],res$GRIVal[2])
     res$HypoC <- ranges$HypoC
@@ -290,14 +290,14 @@ isRedGRI <- function(info, meta = FALSE){
 #' @param info dataframe to be checked
 #' @param meta if TRUE, add meta entry to result object
 #' @return logical vector, if TRUE, this patient is Brown class
-#' @author Fernando Moreno Jabato <fmjabato(at)gmail(dot)com>
+#' @author Fernando Moreno Jabato <jabato(at)uma(dot)com>
 isBrownGRI <- function(info, meta = FALSE){
   # GRI > 80
   classification <- info$GRIVal > 80
   res <- list(value = "Brown", class = classification)
   classification[is.na(classification)] <- FALSE 
   if(meta){
-    res$color <- "brown"
+    res$color <- "peru"
     res$GRIVal <- c(80,100)
     ranges <- calculatesMetaPolygonsGRI(res$GRIVal[1],res$GRIVal[2])
     res$HypoC <- ranges$HypoC
@@ -311,7 +311,7 @@ isBrownGRI <- function(info, meta = FALSE){
 #' @param GRImin minimum GRI of class range
 #' @param GRImax maximum GRI of class range
 #' @return list with derised polygon corners
-#' @author Fernando Moreno Jabato <fmjabato(at)gmail(dot)com>
+#' @author Fernando Moreno Jabato <jabato(at)uma(dot)com>
 calculatesMetaPolygonsGRI <- function(GRImin, GRImax){
   hypo <- function(gri){return(gri/3)}
   hyper <- function(gri){return(gri/1.6)}
